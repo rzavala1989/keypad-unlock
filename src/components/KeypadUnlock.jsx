@@ -1,10 +1,56 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 
-export const KeypadUnlock = ({ correctCombo, screenUnlocked }) => {
+const TIME_IN_MILLISECONDS = 30 * 1000;
+
+export const KeypadUnlock = ({ correctCombo, UnlockedScreen }) => {
   const [submittedCombo, setSubmittedCombo] = useState([]);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [accountLocked, setAccountLocked] = useState(false);
   const [incorrectGuesses, setIncorrectGuesses] = useState(0);
+
+  //lockout timer
+  const [time, setTime] = useState(TIME_IN_MILLISECONDS);
+  const [referenceTime, setReferenceTime] = useState(Date.now());
+
+  useEffect(() => {
+    incorrectGuesses > 0 &&
+      incorrectGuesses < 3 &&
+      alert(
+        `Incorrect PIN!\nYou have made ${incorrectGuesses} incorrect guesses`
+      );
+
+    if (incorrectGuesses === 3) {
+      setAccountLocked(true);
+    }
+  }, [incorrectGuesses]);
+
+  //for timer:
+  useEffect(() => {
+    if (accountLocked) {
+      const countDownUntilZero = () => {
+        setTime((prevTime) => {
+          if (prevTime <= 0) {
+            setAccountLocked(false);
+            setIncorrectGuesses(0);
+            setTime(TIME_IN_MILLISECONDS);
+            return 0;
+          }
+          const now = Date.now();
+          const interval = now - referenceTime;
+          setReferenceTime(now);
+          return prevTime - interval;
+        });
+      };
+      //run timer every 1000ms
+      setTimeout(countDownUntilZero, 1000);
+    }
+  }, [time, accountLocked]);
+
+  useEffect(() => {
+    if (accountLocked === true) {
+      alert(`Account locked for ${time / 1000} seconds`);
+    }
+  }, [accountLocked]);
 
   const doesComboMatch = (ourCombo) => {
     console.assert(ourCombo.length === 4, 'Combo must be 4 digits');
@@ -14,14 +60,14 @@ export const KeypadUnlock = ({ correctCombo, screenUnlocked }) => {
     return true;
   };
 
-  const handleNumberClick = (number) => {
+  const handleNumberClick = async (number) => {
     const newCombo = [...submittedCombo, number];
     setSubmittedCombo(newCombo);
     if (newCombo.length === 4) {
       if (doesComboMatch(newCombo)) {
         setIsLoggedIn(true);
       } else {
-        setIncorrectGuesses(incorrectGuesses + 1);
+        await setIncorrectGuesses(incorrectGuesses + 1);
         setSubmittedCombo([]);
       }
     }
@@ -30,12 +76,18 @@ export const KeypadUnlock = ({ correctCombo, screenUnlocked }) => {
   const Row = ({ startValue }) => (
     <div style={{ display: 'flex' }}>
       {[startValue, startValue + 1, startValue + 2].map((num) => (
-        <section
-          style={{ height: 150, width: 150, borderStyle: 'solid' }}
+        <button
+          style={{
+            height: 150,
+            width: 150,
+            fontSize: 100,
+            borderStyle: 'solid',
+          }}
           onClick={() => handleNumberClick(num)}
+          disabled={accountLocked}
         >
           {num}
-        </section>
+        </button>
       ))}
     </div>
   );
@@ -45,7 +97,9 @@ export const KeypadUnlock = ({ correctCombo, screenUnlocked }) => {
   // Row 2: 4 5 6 ... begin value = 4
   // Row 3: 7 8 9 ... begin value = 7
 
-  return (
+  return isLoggedIn ? (
+    <UnlockedScreen />
+  ) : (
     <div
       style={{
         display: 'flex',
@@ -63,13 +117,14 @@ export const KeypadUnlock = ({ correctCombo, screenUnlocked }) => {
       <Row startValue={1} />
       <Row startValue={4} />
       <Row startValue={7} />
-      <div
-        style={{ height: 150, width: 150, borderStyle: 'solid' }}
+      <button
+        style={{ height: 150, width: 150, fontSize: 100, borderStyle: 'solid' }}
         onClick={() => handleNumberClick(0)}
+        disabled={accountLocked}
       >
         {' '}
         0
-      </div>
+      </button>
     </div>
   );
 };

@@ -16,7 +16,7 @@ function App() {
       <header className='App-header'>Enter your PIN:</header>
       <KeypadUnlock
         correctCombo={[4, 3, 2, 1]} /* 4321... correctCombo.join('') */
-        screenUnlocked={screenUnlocked}
+        UnlockedScreen={screenUnlocked}
       />
     </div>
   );
